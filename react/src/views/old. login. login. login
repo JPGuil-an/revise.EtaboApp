@@ -1,0 +1,163 @@
+old. login 
+
+  // <!-- ===== Page Wrapper Start ===== -->
+    <div className="flex h-screen overflow-hidden">
+      {/* <!-- ===== Content Area Start ===== --> */}
+      <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
+        {/* ===== Main Content Start ===== */}
+        <main>
+          <div classNameName="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+            {/* Breadcrumb Start */}
+            <div classNameName="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 classNameName="text-title-md2 font-bold text-black dark:text-white">
+                Sign In
+              </h2>
+              <nav>
+                <ol classNameName="flex items-center gap-2">
+                  <li>
+                    <a classNameName="font-medium" href="index.html"></a>
+                  </li>
+                  <li classNameName="font-medium text-primary"></li>
+                </ol>
+              </nav>
+            </div>
+            {/* Breadcrumb End */}
+            {/* ====== Forms Section Start */}
+            <div classNameName="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+              <div classNameName="flex flex-wrap items-center">
+                <div classNameName="hidden w-full xl:block xl:w-1/2">
+                  <div classNameName="py-17.5 px-26 text-center">
+                    <a classNameName="mb-5.5 inline-block">
+                      <img
+                        classNameName="hidden dark:block"
+                        src="logo.jpg"
+                        alt="Logo"
+
+                      />
+                      <img classNameName="dark:hidden" src="logo.jpg" alt="Logo" />
+                    </a>
+                    <p classNameName="font-medium 2xl:px-20"></p>
+                    <span classNameName="mt-15 inline-block">
+                     
+                    </span>
+                  </div>
+                </div>
+                <div classNameName="w-full border-stroke dark:border-strokedark xl:w-1/2 xl:border-l-2">
+                  <div classNameName="w-full p-4 sm:p-12.5 xl:p-17.5">
+                    <span classNameName="mb-1.5 block font-medium">
+                      Etabo is a Capstone Project of The IT students from
+                      Bukidnon State University
+                    </span>
+                    <h2 classNameName="mb-9 text-2xl font-bold text-black dark:text-white sm:text-title-xl2">
+                      Sign In to Etabo
+                    </h2>
+
+                    {errors && errors.message && (
+                      <div classNameName="bg-red-100 text-red-700 px-4 py-3 rounded mb-4">
+                        <strong>Error:</strong> {errors.message}
+                      </div>
+                    )}
+
+                    <form onSubmit={onSubmit}>
+                      <div classNameName="mb-4">
+                        <label classNameName="mb-2.5 block font-medium text-black dark:text-white">
+                          Phone Number
+                        </label>
+                        <div classNameName="relative">
+                          <input
+                            ref={mobile_numberRef}
+                            id="mobile_number"
+                            name="mobile_number"
+                            required
+                            type="number"
+                            placeholder="09xxxxxxxx"
+                            classNameName="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                          />
+                          <span classNameName="absolute right-4 top-4">
+                            <svg
+                              classNameName="fill-current"
+                              width={22}
+                              height={22}
+                              viewBox="0 0 22 22"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <g opacity="0.5">
+                                <path
+                                  d="M19.2516 3.30005H2.75156C1.58281 3.30005 0.585938 4.26255 0.585938 5.46567V16.6032C0.585938 17.7719 1.54844 18.7688 2.75156 18.7688H19.2516C20.4203 18.7688 21.4172 17.8063 21.4172 16.6032V5.4313C21.4172 4.26255 20.4203 3.30005 19.2516 3.30005ZM19.2516 4.84692C19.2859 4.84692 19.3203 4.84692 19.3547 4.84692L11.0016 10.2094L2.64844 4.84692C2.68281 4.84692 2.71719 4.84692 2.75156 4.84692H19.2516ZM19.2516 17.1532H2.75156C2.40781 17.1532 2.13281 16.8782 2.13281 16.5344V6.35942L10.1766 11.5157C10.4172 11.6875 10.6922 11.7563 10.9672 11.7563C11.2422 11.7563 11.5172 11.6875 11.7578 11.5157L19.8016 6.35942V16.5688C19.8703 16.9125 19.5953 17.1532 19.2516 17.1532Z"
+                                  fill
+                                />
+                              </g>
+                            </svg>
+                          </span>
+                        </div>
+                      </div>
+                      <div classNameName="mb-6">
+                        <label classNameName="mb-2.5 block font-medium text-black dark:text-white">
+                          Password
+                        </label>
+                        <div classNameName="relative">
+                          <input
+                            ref={passwordRef}
+                            id="password"
+                            type="password"
+                            name="password"
+                            required
+                            placeholder="********"
+                            classNameName="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                          />
+                          <span classNameName="absolute right-4 top-4">
+                            <svg
+                              classNameName="fill-current"
+                              width={22}
+                              height={22}
+                              viewBox="0 0 22 22"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <g opacity="0.5">
+                                <path
+                                  d="M16.1547 6.80626V5.91251C16.1547 3.16251 14.0922 0.825009 11.4797 0.618759C10.0359 0.481259 8.59219 0.996884 7.52656 1.95938C6.46094 2.92188 5.84219 4.29688 5.84219 5.70626V6.80626C3.84844 7.18438 2.33594 8.93751 2.33594 11.0688V17.2906C2.33594 19.5594 4.19219 21.3813 6.42656 21.3813H15.5016C17.7703 21.3813 19.6266 19.525 19.6266 17.2563V11C19.6609 8.93751 18.1484 7.21876 16.1547 6.80626ZM8.55781 3.09376C9.31406 2.40626 10.3109 2.06251 11.3422 2.16563C13.1641 2.33751 14.6078 3.98751 14.6078 5.91251V6.70313H7.38906V5.67188C7.38906 4.70938 7.80156 3.78126 8.55781 3.09376ZM18.1141 17.2906C18.1141 18.7 16.9453 19.8688 15.5359 19.8688H6.46094C5.05156 19.8688 3.91719 18.7344 3.91719 17.325V11.0688C3.91719 9.52189 5.15469 8.28438 6.70156 8.28438H15.2953C16.8422 8.28438 18.1141 9.52188 18.1141 11V17.2906Z"
+                                  fill
+                                />
+                                <path
+                                  d="M10.9977 11.8594C10.5852 11.8594 10.207 12.2031 10.207 12.65V16.2594C10.207 16.6719 10.5508 17.05 10.9977 17.05C11.4102 17.05 11.7883 16.7063 11.7883 16.2594V12.6156C11.7883 12.2031 11.4102 11.8594 10.9977 11.8594Z"
+                                  fill
+                                />
+                              </g>
+                            </svg>
+                          </span>
+                        </div>
+                      </div>
+                      <div classNameName="mb-5">
+                        {/* <input type="submit" defaultValue="Sign In" classNameName="w-full cursor-pointer rounded-lg border border-blue-500 bg-blue-500 p-4 font-medium text-white transition hover:bg-opacity-90" /> */}
+                        <button
+                          type="submit"
+                          classNameName={`w-full text-center py-3 rounded bg-green-500 text-white hover:bg-green-dark focus:outline-none my-2 ${
+                            isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                          disabled={isSubmitting}
+                        >
+                          Signin
+                        </button>
+                      </div>
+
+                      <div classNameName="mt-6 text-center text-gray-900">
+                        <p classNameName="font-medium">
+                          Don’t have any account yet?
+                          <a href="/signup" classNameName="text-blue-600 ml-2">
+                            Sign Up
+                          </a>
+                        </p>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* ====== Forms Section End */}
+          </div>
+        </main>
+        {/* ===== Main Content End ===== */}
+      </div>
+    </div>
