@@ -1,4 +1,4 @@
-old. login 
+old login
 
   // <!-- ===== Page Wrapper Start ===== -->
     <div className="flex h-screen overflow-hidden">
@@ -38,7 +38,7 @@ old. login
                     </a>
                     <p classNameName="font-medium 2xl:px-20"></p>
                     <span classNameName="mt-15 inline-block">
-                     
+
                     </span>
                   </div>
                 </div>
