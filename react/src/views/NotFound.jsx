@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 
 export default function NotFound() {
   return (
+
+    // this is not found page comment only
     <div className="bg-gray-800 h-screen">
       <div className="flex items-center justify-center py-12">
         <div className="bg-white border rounded-md flex items-center justify-center mx-4 md:w-2/3 ">
