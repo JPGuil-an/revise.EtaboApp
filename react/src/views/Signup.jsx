@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import axiosClient from "../axios-client.js";
 import Webcam from "react-webcam";
 import Modal from "../components/Modal.jsx";
@@ -7,11 +7,12 @@ export default function Signup() {
   const webcamRef = useRef(null);
   const [imageCaptured, setImageCaptured] = useState(null);
   const [open, setOpen] = useState(false);
-
-  const [errors, setErrors] = useState(null);
+  const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false); // State to control the modal visibility
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formValid, setFormValid] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
 
   const [formData, setFormData] = useState({
     id_pic: null,
@@ -20,34 +21,135 @@ export default function Signup() {
     birthday: "",
     mobile_number: "",
     address: "",
-    user_type: "", // Add an initial value here
-    // id_pic: null, // Change to null to handle file uploads
+    user_type: "",
   });
+
+  useEffect(() => {
+    let timer;
+    if (showAlert) {
+      timer = setTimeout(() => {
+        setShowAlert(false);
+      }, 5000);
+    }
+    return () => clearTimeout(timer);
+  }, [showAlert]);
+
+  const validateForm = () => {
+    const { name, email, mobile_number, birthday, address, user_type } = formData;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const mobileRegex = /^09\d{9}$/;
+    const nameRegex = /^[a-zA-Z\s]{2,50}$/;
+
+    const newErrors = {};
+
+    if (!name || !nameRegex.test(name)) {
+      newErrors.name = "Name should be 2-50 characters and contain only letters";
+    }
+
+    if (!email || !emailRegex.test(email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    if (!mobile_number || !mobileRegex.test(mobile_number)) {
+      newErrors.mobile_number = "Please enter a valid mobile number (09XXXXXXXXX)";
+    }
+
+    if (!birthday) {
+      newErrors.birthday = "Please select your birthday";
+    } else {
+      const age = calculateAge(birthday);
+      if (age < 18) {
+        newErrors.birthday = "You must be at least 18 years old";
+      }
+    }
+
+    if (!address || address.length < 5) {
+      newErrors.address = "Please enter a valid address (minimum 5 characters)";
+    }
+
+    if (!user_type || user_type === "Buyer ,Seller ? Please select") {
+      newErrors.user_type = "Please select a user type";
+    }
+
+    if (!imageCaptured) {
+      newErrors.id_pic = "Please take a photo with your ID";
+    }
+
+    setErrors(newErrors);
+    setFormValid(Object.keys(newErrors).length === 0);
+  };
+
+  const calculateAge = (birthday) => {
+    const today = new Date();
+    const birthDate = new Date(birthday);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    validateForm();
+  };
 
   const handleCapture = () => {
     const screenshot = webcamRef.current.getScreenshot();
     setImageCaptured(screenshot);
-
-    // Add email and age to formData
-    const name = document.getElementById("name").value;
-    const email = document.getElementById("email").value;
-    const birthday = document.getElementById("birthday").value;
-    const mobile_number = document.getElementById("mobile_number").value;
-    const address = document.getElementById("address").value;
-    const user_type = document.getElementById("user_type").value;
-
-    setFormData({
-      ...formData,
-      id_pic: screenshot,
-      name: name,
-      email: email,
-      birthday: birthday,
-      mobile_number: mobile_number,
-      address: address,
-      user_type: user_type, // Add a
-    });
-
+    setFormData(prev => ({
+      ...prev,
+      id_pic: screenshot
+    }));
     setOpen(false);
+    validateForm();
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formValid) {
+      setShowAlert(true);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrors({});
+
+    const imageFormData = new FormData();
+    const desiredFilename = `${formData.name}.jpg`;
+
+    imageFormData.append("id_pic", dataURLtoBlob(imageCaptured), desiredFilename);
+    imageFormData.append("name", formData.name);
+    imageFormData.append("birthday", formData.birthday);
+    imageFormData.append("address", formData.address);
+    imageFormData.append("mobile_number", formData.mobile_number);
+    imageFormData.append("email", formData.email);
+    imageFormData.append("user_type", formData.user_type);
+
+    axiosClient
+      .post("/signup", imageFormData)
+      .then((response) => {
+        if (response && response.status === 200) {
+          setModalMessage(response.data.success);
+          setIsModalOpen(true);
+        }
+      })
+      .catch((err) => {
+        const response = err.response;
+        if (response && response.status === 422) {
+          setErrors(response.data.errors);
+          setShowAlert(true);
+        }
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   const handleOpen = () => {
@@ -67,103 +169,33 @@ export default function Signup() {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setErrors(null); // Reset errors before form submission
-
-  // Create a FormData object for the image
-  const imageFormData = new FormData();
-  const desiredFilename = `${formData.name}.jpg`; // Construct desired filename
-  const name = `${formData.name}`; // Construct desired filename
-  const birthday = `${formData.birthday}`; // Construct desired filename
-  const address = `${formData.address}`; // Construct desired filename
-  const mobile_number = `${formData.mobile_number}`; // Construct desired filename
-  const email = `${formData.email}`; // Construct desired filename
-  const user_type = `${formData.user_type}`; // Construct desired filename
-
-
-
-  // const desiredFilename = `${formData.name}; // Construct desired filename
-  // const desiredFilename = `${formData.name}; // Construct desired filename
-
-
-  // Append the captured image with the desired filename
-  imageFormData.append("id_pic", dataURLtoBlob(imageCaptured), desiredFilename);
-  imageFormData.append("name", name );
-  imageFormData.append("birthday", birthday );
-  imageFormData.append("address", address );
-  imageFormData.append("mobile_number", mobile_number );
-  imageFormData.append("email", email );
-  imageFormData.append("user_type", user_type );
-  // imageFormData.append("user_type", user_type );
-
-
-
-  imageFormData.append("birthday", birthday );
-
-    axiosClient
-      .post("/signup", imageFormData)
-      .then((response) => {
-        setIsSubmitting(false);
-        if (response && response.status === 200) {
-          const successMessage = response.data.success;
-          if (successMessage) {
-            setIsModalOpen(true);
-            setModalMessage(successMessage);
-          }
-        }
-      })
-      .catch((err) => {
-        const response = err.response;
-        if (response && response.status === 422) {
-          setErrors(response.data.errors);
-        }
-        setIsSubmitting(false);
-      });
-  };
-
   const closeModal = () => {
-    setIsModalOpen(false); // Close the modal
+    setIsModalOpen(false);
   };
 
-  // Helper function to convert data URL to Blob
-const dataURLtoBlob = (dataURL) => {
-  const parts = dataURL.split(",");
-  const contentType = parts[0].split(":")[1].split(";")[0];
-  const raw = window.atob(parts[1]);
-  const rawLength = raw.length;
-  const uInt8Array = new Uint8Array(rawLength);
-  for (let i = 0; i < rawLength; ++i) {
-    uInt8Array[i] = raw.charCodeAt(i);
-  }
-  return new Blob([uInt8Array], { type: contentType });
-};
+  const dataURLtoBlob = (dataURL) => {
+    const parts = dataURL.split(",");
+    const contentType = parts[0].split(":")[1].split(";")[0];
+    const raw = window.atob(parts[1]);
+    const rawLength = raw.length;
+    const uInt8Array = new Uint8Array(rawLength);
+    for (let i = 0; i < rawLength; ++i) {
+      uInt8Array[i] = raw.charCodeAt(i);
+    }
+    return new Blob([uInt8Array], { type: contentType });
+  };
 
   return (
-    // <!-- ===== Page Wrapper Start ===== -->
     <div className="flex h-screen overflow-hidden">
-      {/* <!-- ===== Content Area Start ===== --> */}
       <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
-        {/* ===== Main Content Start ===== */}
         <main>
           <div className="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-            {/* Breadcrumb Start */}
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-title-md2 font-bold text-black dark:text-white">
                 Sign Up
               </h2>
-              <nav>
-                <ol className="flex items-center gap-2">
-                  <li>
-                    <a className="font-medium" href=""></a>
-                  </li>
-                  <li className="font-medium text-primary"></li>
-                </ol>
-              </nav>
             </div>
-            {/* Breadcrumb End */}
-            {/* ====== Forms Section Start */}
+
             <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
               <div className="flex flex-wrap items-center">
                 <div className="hidden w-full xl:block xl:w-1/2">
@@ -313,18 +345,13 @@ const dataURLtoBlob = (dataURL) => {
                       Sign Up to Etabo
                     </h2>
 
-                    {errors && Object.keys(errors).length > 0 && (
-                      <div className="bg-red-100 text-red-700 px-4 py-3 rounded mb-4">
-                        <strong>Error:</strong> {errors.message}
-                        <ul>
-                          {Object.keys(errors).map((field) =>
-                            errors[field].map((message, index) => (
-                              <li key={index}>{message}</li>
-                            ))
-                          )}
-                        </ul>
+                    {showAlert && (
+                      <div className="mb-4 animate-fade-in-out bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                        <strong className="font-bold">Error! </strong>
+                        <span className="block sm:inline">Please check all fields and try again</span>
                       </div>
                     )}
+
                     {isModalOpen && (
                       <Modal
                         isOpen={isModalOpen}
@@ -332,8 +359,15 @@ const dataURLtoBlob = (dataURL) => {
                         message={modalMessage}
                       />
                     )}
-                    <p>Please take a Photo with Your ID and Face in one frame.</p>
-                    <button  className="btn my-custom-button-class bg-blue-500 text-white p-3 rounded-lg" onClick={handleOpen}>Take Photo</button>
+
+                    <p className="mb-4 text-sm text-gray-600">Please take a Photo with Your ID and Face in one frame.</p>
+                    <button 
+                      className="btn my-custom-button-class bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg transition-colors duration-200" 
+                      onClick={handleOpen}
+                    >
+                      Take Photo
+                    </button>
+
                     {open && (
                       <div
                         style={{
@@ -372,369 +406,171 @@ const dataURLtoBlob = (dataURL) => {
                         </div>
                       </div>
                     )}
-                     {imageCaptured && (
-                    <form onSubmit={handleSubmit}>
-                      <div className="mb-4">
-                        <label className="mb-2.5 block font-medium text-black dark:text-white">
-                          Name
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            value={formData.name}
-                            onChange={(e) =>
-                              setFormData({ ...formData, name: e.target.value })
-                            }
-                            required
-                            placeholder="Enter your full name"
-                            className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-                          />
-                          <span className="absolute right-4 top-4">
-                            <svg
-                              className="fill-current"
-                              width={22}
-                              height={22}
-                              viewBox="0 0 22 22"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <g opacity="0.5">
-                                <path
-                                  d="M11.0008 9.52185C13.5445 9.52185 15.607 7.5281 15.607 5.0531C15.607 2.5781 13.5445 0.584351 11.0008 0.584351C8.45703 0.584351 6.39453 2.5781 6.39453 5.0531C6.39453 7.5281 8.45703 9.52185 11.0008 9.52185ZM11.0008 2.1656C12.6852 2.1656 14.0602 3.47185 14.0602 5.08748C14.0602 6.7031 12.6852 8.00935 11.0008 8.00935C9.31641 8.00935 7.94141 6.7031 7.94141 5.08748C7.94141 3.47185 9.31641 2.1656 11.0008 2.1656Z"
-                                  fill
-                                />
-                                <path
-                                  d="M13.2352 11.0687H8.76641C5.08828 11.0687 2.09766 14.0937 2.09766 17.7719V20.625C2.09766 21.0375 2.44141 21.4156 2.88828 21.4156C3.33516 21.4156 3.67891 21.0719 3.67891 20.625V17.7719C3.67891 14.9531 5.98203 12.6156 8.83516 12.6156H13.2695C16.0883 12.6156 18.4258 14.9187 18.4258 17.7719V20.625C18.4258 21.0375 18.7695 21.4156 19.2164 21.4156C19.6633 21.4156 20.007 21.0719 20.007 20.625V17.7719C19.9039 14.0937 16.9133 11.0687 13.2352 11.0687Z"
-                                  fill
-                                />
-                              </g>
-                            </svg>
-                          </span>
-                        </div>
-                      </div>
-                      <div className="mb-4">
-                        <label className="mb-2.5 block font-medium text-black dark:text-white">
-                          Email
-                        </label>
-                        <div className="relative">
-                          <input
-                            name="email"
-                            id="email"
-                            value={formData.email}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                email: e.target.value,
-                              })
-                            }
-                            required
-                            type="email"
-                            placeholder="Enter your email"
-                            className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-                          />
-                          <span className="absolute right-4 top-4">
-                            <svg
-                              className="fill-current"
-                              width={22}
-                              height={22}
-                              viewBox="0 0 22 22"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <g opacity="0.5">
-                                <path
-                                  d="M19.2516 3.30005H2.75156C1.58281 3.30005 0.585938 4.26255 0.585938 5.46567V16.6032C0.585938 17.7719 1.54844 18.7688 2.75156 18.7688H19.2516C20.4203 18.7688 21.4172 17.8063 21.4172 16.6032V5.4313C21.4172 4.26255 20.4203 3.30005 19.2516 3.30005ZM19.2516 4.84692C19.2859 4.84692 19.3203 4.84692 19.3547 4.84692L11.0016 10.2094L2.64844 4.84692C2.68281 4.84692 2.71719 4.84692 2.75156 4.84692H19.2516ZM19.2516 17.1532H2.75156C2.40781 17.1532 2.13281 16.8782 2.13281 16.5344V6.35942L10.1766 11.5157C10.4172 11.6875 10.6922 11.7563 10.9672 11.7563C11.2422 11.7563 11.5172 11.6875 11.7578 11.5157L19.8016 6.35942V16.5688C19.8703 16.9125 19.5953 17.1532 19.2516 17.1532Z"
-                                  fill
-                                />
-                              </g>
-                            </svg>
-                          </span>
-                        </div>
-                      </div>
-                      <div className="mb-4">
-                        <label className="mb-2.5 block font-medium text-black dark:text-white">
-                          Mobile Number
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            placeholder="09xxxxxxx"
-                            name="mobile_number"
-                            id="mobile_number"
-                            value={formData.mobile_number}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                mobile_number: e.target.value,
-                              })
-                            }
-                            required
-                            className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-                          />
-                          <span className="absolute right-4 top-4">
-                            <svg
-                              className="fill-current"
-                              width={22}
-                              height={22}
-                              viewBox="0 0 22 22"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <g opacity="0.5">
-                                <path
-                                  d="M19.2516 3.30005H2.75156C1.58281 3.30005 0.585938 4.26255 0.585938 5.46567V16.6032C0.585938 17.7719 1.54844 18.7688 2.75156 18.7688H19.2516C20.4203 18.7688 21.4172 17.8063 21.4172 16.6032V5.4313C21.4172 4.26255 20.4203 3.30005 19.2516 3.30005ZM19.2516 4.84692C19.2859 4.84692 19.3203 4.84692 19.3547 4.84692L11.0016 10.2094L2.64844 4.84692C2.68281 4.84692 2.71719 4.84692 2.75156 4.84692H19.2516ZM19.2516 17.1532H2.75156C2.40781 17.1532 2.13281 16.8782 2.13281 16.5344V6.35942L10.1766 11.5157C10.4172 11.6875 10.6922 11.7563 10.9672 11.7563C11.2422 11.7563 11.5172 11.6875 11.7578 11.5157L19.8016 6.35942V16.5688C19.8703 16.9125 19.5953 17.1532 19.2516 17.1532Z"
-                                  fill
-                                />
-                              </g>
-                            </svg>
-                          </span>
-                        </div>
-                      </div>
-                      <div className="mb-4">
-                        <label className="mb-2.5 block font-medium text-black dark:text-white">
-                          Birthday
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="date"
-                            name="birthday"
-                            id="birthday"
-                            value={formData.birthday}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                birthday: e.target.value,
-                              })
-                            }
-                            required
-                            className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-                          />
-                        </div>
-                      </div>
-                      <div className="mb-4">
-                        <label className="mb-2.5 block font-medium text-black dark:text-white">
-                          Address
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            name="address"
-                            id="address"
-                            value={formData.address}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                address: e.target.value,
-                              })
-                            }
-                            required
-                            placeholder="Enter your Location / Address"
-                            className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-                          />
-                          <span className="absolute right-4 top-4">
-                            <svg
-                              className="fill-current"
-                              width={22}
-                              height={22}
-                              viewBox="0 0 22 22"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <g opacity="0.5">
-                                <path
-                                  d="M11.0008 9.52185C13.5445 9.52185 15.607 7.5281 15.607 5.0531C15.607 2.5781 13.5445 0.584351 11.0008 0.584351C8.45703 0.584351 6.39453 2.5781 6.39453 5.0531C6.39453 7.5281 8.45703 9.52185 11.0008 9.52185ZM11.0008 2.1656C12.6852 2.1656 14.0602 3.47185 14.0602 5.08748C14.0602 6.7031 12.6852 8.00935 11.0008 8.00935C9.31641 8.00935 7.94141 6.7031 7.94141 5.08748C7.94141 3.47185 9.31641 2.1656 11.0008 2.1656Z"
-                                  fill
-                                />
-                                <path
-                                  d="M13.2352 11.0687H8.76641C5.08828 11.0687 2.09766 14.0937 2.09766 17.7719V20.625C2.09766 21.0375 2.44141 21.4156 2.88828 21.4156C3.33516 21.4156 3.67891 21.0719 3.67891 20.625V17.7719C3.67891 14.9531 5.98203 12.6156 8.83516 12.6156H13.2695C16.0883 12.6156 18.4258 14.9187 18.4258 17.7719V20.625C18.4258 21.0375 18.7695 21.4156 19.2164 21.4156C19.6633 21.4156 20.007 21.0719 20.007 20.625V17.7719C19.9039 14.0937 16.9133 11.0687 13.2352 11.0687Z"
-                                  fill
-                                />
-                              </g>
-                            </svg>
-                          </span>
-                        </div>
-                      </div>
-                      {/* <div className="mb-2">
-                        <label className="mb-1 block font-medium text-black dark:text-white">
-                          ID Picture Verification
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="file"
-                            id="id_pic"
-                            name="id_pic"
-                            onChange={handleFileChange} // Handle file input separately
-                            className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-                          />
-                        </div>
-                      </div> */}
-                      <div className="mb-6">
-                        <label className="mb-2.5 block font-medium text-black dark:text-white">
-                          User Type
-                        </label>
-                        <div className="relative">
-                          <select
-                            id="user_type"
-                            name="user_type"
-                            className="block border border-grey-light w-full p-3 rounded mb-4"
-                            value={formData.user_type}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                user_type: e.target.value,
-                              })
-                            }
-                            required
-                          >
-                            <option>Buyer ,Seller ? Please select</option>
-                            <option value={0}>Buyer</option>
-                            {/* <option value={1}>Seller</option> */}
-                            <option value={1}>Buyer / Seller</option>
-                            {/* <option value={2}>Admin / DA</option> */}
-                          </select>
-                        </div>
-                      </div>
-                      <div className="mb-5">
-                        <button
-                          type="submit"
-                          className={`w-full text-center py-3 rounded bg-green-500 text-white hover:bg-green-dark focus:outline-none mt-4 ${
-                            isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-                          }`}
-                          disabled={isSubmitting}
-                        >
-                          Create Account
-                        </button>
-                      </div>
 
-                      <div className="mt-6 text-center text-gray-900">
-                        <p className="font-medium">
-                          Already have an Account?
-                          <a href="/login" className="text-blue-600 ml-2">
-                            Signin
-                          </a>
-                        </p>
-                      </div>
-                    </form>
-                     )}
+                    {imageCaptured && (
+                      <form onSubmit={handleSubmit} className="mt-6">
+                        <div className="mb-4">
+                          <label className="mb-2.5 block font-medium text-black dark:text-white">
+                            Name
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              id="name"
+                              name="name"
+                              value={formData.name}
+                              onChange={handleInputChange}
+                              required
+                              placeholder="Enter your full name"
+                              className={`w-full rounded-lg border ${
+                                errors.name ? 'border-red-500' : 'border-stroke'
+                              } bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                            />
+                            {errors.name && (
+                              <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mb-4">
+                          <label className="mb-2.5 block font-medium text-black dark:text-white">
+                            Email
+                          </label>
+                          <div className="relative">
+                            <input
+                              name="email"
+                              id="email"
+                              value={formData.email}
+                              onChange={handleInputChange}
+                              required
+                              type="email"
+                              placeholder="Enter your email"
+                              className={`w-full rounded-lg border ${
+                                errors.email ? 'border-red-500' : 'border-stroke'
+                              } bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                            />
+                            {errors.email && (
+                              <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mb-4">
+                          <label className="mb-2.5 block font-medium text-black dark:text-white">
+                            Mobile Number
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              placeholder="09xxxxxxx"
+                              name="mobile_number"
+                              id="mobile_number"
+                              value={formData.mobile_number}
+                              onChange={handleInputChange}
+                              required
+                              className={`w-full rounded-lg border ${
+                                errors.mobile_number ? 'border-red-500' : 'border-stroke'
+                              } bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                            />
+                            {errors.mobile_number && (
+                              <p className="mt-1 text-sm text-red-500">{errors.mobile_number}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mb-4">
+                          <label className="mb-2.5 block font-medium text-black dark:text-white">
+                            Birthday
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="date"
+                              name="birthday"
+                              id="birthday"
+                              value={formData.birthday}
+                              onChange={handleInputChange}
+                              required
+                              className={`w-full rounded-lg border ${
+                                errors.birthday ? 'border-red-500' : 'border-stroke'
+                              } bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                            />
+                            {errors.birthday && (
+                              <p className="mt-1 text-sm text-red-500">{errors.birthday}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mb-4">
+                          <label className="mb-2.5 block font-medium text-black dark:text-white">
+                            Address
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              name="address"
+                              id="address"
+                              value={formData.address}
+                              onChange={handleInputChange}
+                              required
+                              placeholder="Enter your Location / Address"
+                              className={`w-full rounded-lg border ${
+                                errors.address ? 'border-red-500' : 'border-stroke'
+                              } bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary`}
+                            />
+                            {errors.address && (
+                              <p className="mt-1 text-sm text-red-500">{errors.address}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mb-6">
+                          <label className="mb-2.5 block font-medium text-black dark:text-white">
+                            User Type
+                          </label>
+                          <div className="relative">
+                            <select
+                              id="user_type"
+                              name="user_type"
+                              className={`block border border-grey-light w-full p-3 rounded mb-4 ${
+                                errors.user_type ? 'border-red-500' : 'border-stroke'
+                              }`}
+                              value={formData.user_type}
+                              onChange={handleInputChange}
+                              required
+                            >
+                              <option>Buyer ,Seller ? Please select</option>
+                              <option value={0}>Buyer</option>
+                              <option value={1}>Buyer / Seller</option>
+                            </select>
+                            {errors.user_type && (
+                              <p className="mt-1 text-sm text-red-500">{errors.user_type}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mb-5">
+                          <button
+                            type="submit"
+                            className={`w-full text-center py-3 rounded bg-green-500 text-white hover:bg-green-600 focus:outline-none mt-4 transition-colors duration-200 ${
+                              (!formValid || isSubmitting) ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                            disabled={!formValid || isSubmitting}
+                          >
+                            {isSubmitting ? "Creating Account..." : "Create Account"}
+                          </button>
+                        </div>
+
+                        <div className="mt-6 text-center text-gray-900">
+                          <p className="font-medium">
+                            Already have an Account?
+                            <a href="/login" className="text-blue-600 hover:text-blue-700 ml-2 transition-colors duration-200">
+                              Sign in
+                            </a>
+                          </p>
+                        </div>
+                      </form>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
-            {/* ====== Forms Section End */}
           </div>
         </main>
-        {/* ===== Main Content End ===== */}
       </div>
     </div>
-
-    // <div className="bg-gray-800 min-h-screen flex flex-col">
-    //   <div className="container max-w-lg mx-auto flex-1 flex flex-col items-center justify-center px-2">
-    //     <div className="bg-white px-6 py-8 rounded shadow-md text-black w-full">
-    //       <h1 className="mb-8 text-3xl text-center">Signup</h1>
-
-    //       <form onSubmit={handleSubmit} encType="multipart/form-data">
-    //         <input
-    //           type="text"
-    //           className="block border border-grey-light w-full p-3 rounded mb-4"
-    //           name="name"
-    //           placeholder="Full Name"
-    //           value={formData.name}
-    //           onChange={handleChange}
-    //           required
-    //         />
-
-    //         <input
-    //           type="email"
-    //           className="block border border-grey-light w-full p-3 rounded mb-4"
-    //           name="email"
-    //           placeholder="Email"
-    //           value={formData.email}
-    //           onChange={handleChange}
-    //           required
-    //         />
-    //         <input
-    //           type="text"
-    //           className="block border border-grey-light w-full p-3 rounded mb-4"
-    //           name="mobile_number"
-    //           placeholder="Mobile Number"
-    //           value={formData.mobile_number}
-    //           onChange={handleChange}
-    //           required
-    //         />
-    //         <input
-    //           type="date"
-    //           className="block border border-grey-light w-full p-3 rounded mb-4"
-    //           name="birthday"
-    //           value={formData.birthday}
-    //           onChange={handleChange}
-    //           required
-    //         />
-    //         <input
-    //           type="text"
-    //           className="block border border-grey-light w-full p-3 rounded mb-4"
-    //           name="address"
-    //           placeholder="Address"
-    //           value={formData.address}
-    //           onChange={handleChange}
-    //           required
-    //         />
-
-    //         <select
-    //           id="user_type"
-    //           name="user_type"
-    //           className="block border border-grey-light w-full p-3 rounded mb-4"
-    //           value={formData.user_type}
-    //           onChange={handleChange}
-    //           required
-    //         >
-    //            <option>
-    //            Buyer ,Seller ? Please select
-    //           </option>
-    //           <option value={0}>
-    //             Buyer
-    //           </option>
-    //           <option value={1}>Seller</option>
-    //         </select>
-
-    //         <label
-    //           className="block  w-full text-slate-200 bg-slate-500 rounded mb-2"
-    //           htmlFor="id_pic"
-    //         >
-    //           {" "}
-    //           Upload a Valid ID for Confirmation
-    //         </label>
-
-    //            <input
-    //           id="id_pic"
-    //           type="file"
-    //           name="id_pic"
-    //           onChange={handleFileChange} // Handle file input separately
-    //         />
-
-    //          <button
-    //           type="submit"
-    //           className={`w-full text-center py-3 rounded bg-green-500 text-white hover:bg-green-dark focus:outline-none mt-4 ${
-    //             isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-    //           }`}
-    //           disabled={isSubmitting}
-    //         >
-    //           Create Account
-    //         </button>
-    //       </form>
-    //       <div className="text-grey-dark mt-5">
-    //         Already have an account?
-    //         <a
-    //           className="no-underline border-b border-blue text-blue"
-    //           href="/login"
-    //         >
-    //           &nbsp; Log in
-    //         </a>
-    //         .
-    //       </div>
-    //     </div>
-    //   </div>
-    // </div>
   );
 }

@@ -14,6 +14,7 @@ export default function Login() {
     password: ''
   });
   const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export default function Login() {
     if (showAlert) {
       timer = setTimeout(() => {
         setShowAlert(false);
+        setAlertMessage('');
       }, 5000);
     }
     return () => clearTimeout(timer);
@@ -41,6 +43,8 @@ export default function Login() {
       mobile_number: '',
       password: ''
     });
+    setShowAlert(false);
+    setAlertMessage('');
 
     const payload = {
       mobile_number: mobile_numberRef.current.value,
@@ -60,16 +64,18 @@ export default function Login() {
         const response = err.response;
         if (response && response.status === 422) {
           const errorData = response.data;
-          setErrors({
-            mobile_number: errorData.errors?.mobile_number ? 'Error' : '',
-            password: errorData.errors?.password ? 'Error' : ''
-          });
-          setShowAlert(true);
+          if (errorData.message) {
+            setAlertMessage(errorData.message);
+            setShowAlert(true);
+          }
+          if (errorData.errors) {
+            setErrors({
+              mobile_number: errorData.errors?.mobile_number?.[0] || '',
+              password: errorData.errors?.password?.[0] || ''
+            });
+          }
         } else {
-          setErrors({
-            mobile_number: 'Error',
-            password: 'Error'
-          });
+          setAlertMessage(response?.data?.message || 'An error occurred. Please try again.');
           setShowAlert(true);
         }
       })
@@ -106,7 +112,7 @@ export default function Login() {
                 {showAlert && (
                   <div className="animate-fade-in-out bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
                     <strong className="font-bold">Error! </strong>
-                    <span className="block sm:inline">Error in password or username</span>
+                    <span className="block sm:inline">{alertMessage}</span>
                   </div>
                 )}
                 <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
@@ -154,7 +160,7 @@ export default function Login() {
                         errors.password ? 'border-red-500' : 'border-gray-300'
                       } text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}
                       required
-                      minLength="5"
+                      minLength=""
                       onChange={validateForm}
                     />
                     {errors.password && (
