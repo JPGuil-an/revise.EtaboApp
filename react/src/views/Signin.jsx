@@ -122,7 +122,7 @@ export default function Login() {
                       ref={mobile_numberRef}
                       id="mobile_number"
                       name="mobile_number"
-                      type="number"
+                      type="tel"
                       pattern="[0-9]*"
                       inputMode="numeric"
                       className={`bg-gray-50 border ${
