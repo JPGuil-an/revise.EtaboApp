@@ -37,7 +37,7 @@ export default function Login() {
   const onSubmit = (ev) => {
     ev.preventDefault();
     if (!formValid) return;
-    
+
     setIsSubmitting(true);
     setErrors({
       mobile_number: '',
@@ -87,7 +87,7 @@ export default function Login() {
   return (
     <div className="min-h-screen relative">
       {/* Background Image with Overlay */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
           backgroundImage: 'url("https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2232&q=80")',
@@ -95,7 +95,7 @@ export default function Login() {
           zIndex: 0
         }}
       />
-      
+
       {/* Content */}
       <div className="relative z-10">
         <section className="min-h-screen">
@@ -116,7 +116,7 @@ export default function Login() {
                   </div>
                 )}
                 <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-                  We require each user to sign in
+                  We require each user to sign
                 </h1>
 
                 <form className="space-y-4 md:space-y-6" onSubmit={onSubmit}>
@@ -172,7 +172,7 @@ export default function Login() {
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                  
+
                     <Link to="/forgot-password" className="text-sm font-medium text-primary-600 hover:underline dark:text-primary-500">
                       Forgot password?
                     </Link>
