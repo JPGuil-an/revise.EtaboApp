@@ -116,7 +116,7 @@ export default function Login() {
                   </div>
                 )}
                 <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-                  We require each user to sign
+                  We require each user to signs
                 </h1>
 
                 <form className="space-y-4 md:space-y-6" onSubmit={onSubmit}>
